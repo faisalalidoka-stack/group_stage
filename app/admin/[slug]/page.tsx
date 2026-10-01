@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
+import GalleryManager from "@/components/admin/GalleryManager";
 
 type Team = {
   id: string;
@@ -57,11 +59,11 @@ type Goal = {
 
 type Tournament = {
   id: string;
+  admin_id: string;
   name: string;
   public_slug: string;
   format: string;
 };
-
 type MatchEditor = {
   match: Match;
   homeScore: number;
@@ -94,6 +96,7 @@ export default function AdminPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [authorized, setAuthorized] = useState(false);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -104,9 +107,8 @@ export default function AdminPage() {
   const [editingGoals, setEditingGoals] = useState<GoalEditor[]>([]);
 
   const [activeTab, setActiveTab] = useState<
-    "fixtures" | "teams"
-  >("fixtures");
-
+  "fixtures" | "teams" | "gallery"
+>("fixtures");
   const teamMap = useMemo(() => {
     return new Map(teams.map((team) => [team.id, team]));
   }, [teams]);
@@ -147,95 +149,121 @@ export default function AdminPage() {
   };
 
   async function loadDashboard() {
-    setLoading(true);
-    clearMessages();
+  setLoading(true);
+  clearMessages();
+  setAuthorized(false);
 
-    try {
-      const {
-        data: tournamentData,
-        error: tournamentError,
-      } = await supabase
-        .from("tournaments")
-        .select("*")
-        .eq("public_slug", slug)
-        .single();
+  try {
+    // 1. Check the currently signed-in user
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-      if (tournamentError || !tournamentData) {
-        throw new Error(
-          tournamentError?.message ||
-            "Tournament not found."
-        );
-      }
-
-      setTournament(tournamentData);
-
-      const [
-        teamsResult,
-        playersResult,
-        matchesResult,
-        goalsResult,
-      ] = await Promise.all([
-        supabase
-          .from("teams")
-          .select("*")
-          .eq("tournament_id", tournamentData.id)
-          .order("name"),
-
-        supabase
-          .from("players")
-          .select("*")
-          .order("team_id")
-          .order("number"),
-
-        supabase
-          .from("matches")
-          .select("*")
-          .eq("tournament_id", tournamentData.id)
-          .order("round_number")
-          .order("scheduled_at"),
-
-        supabase
-          .from("goals")
-          .select("*"),
-      ]);
-
-      if (teamsResult.error) {
-        throw new Error(teamsResult.error.message);
-      }
-
-      if (playersResult.error) {
-        throw new Error(playersResult.error.message);
-      }
-
-      if (matchesResult.error) {
-        throw new Error(matchesResult.error.message);
-      }
-
-      if (goalsResult.error) {
-        throw new Error(goalsResult.error.message);
-      }
-
-      setTeams(teamsResult.data ?? []);
-      setPlayers(playersResult.data ?? []);
-      setMatches(matchesResult.data ?? []);
-
-      setGoals(
-        (goalsResult.data ?? []).filter((goal) =>
-          (matchesResult.data ?? []).some(
-            (match) => match.id === goal.match_id
-          )
-        )
-      );
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load dashboard."
-      );
-    } finally {
-      setLoading(false);
+    if (userError || !user) {
+      router.push("/");
+      return;
     }
+
+    // 2. Load the tournament
+    const {
+      data: tournamentData,
+      error: tournamentError,
+    } = await supabase
+      .from("tournaments")
+      .select("*")
+      .eq("public_slug", slug)
+      .single();
+
+    if (tournamentError || !tournamentData) {
+      throw new Error(
+        tournamentError?.message ||
+          "Tournament not found."
+      );
+    }
+
+    // 3. Verify tournament ownership
+    if (tournamentData.admin_id !== user.id) {
+      setAuthorized(false);
+      setTournament(null);
+      setError(
+        "You are not authorized to manage this tournament."
+      );
+      return;
+    }
+
+    // 4. User owns the tournament
+    setAuthorized(true);
+    setTournament(tournamentData);
+
+    // 5. Load tournament data
+    const [
+      teamsResult,
+      playersResult,
+      matchesResult,
+      goalsResult,
+    ] = await Promise.all([
+      supabase
+        .from("teams")
+        .select("*")
+        .eq("tournament_id", tournamentData.id)
+        .order("name"),
+
+      supabase
+        .from("players")
+        .select("*")
+        .order("team_id")
+        .order("number"),
+
+      supabase
+        .from("matches")
+        .select("*")
+        .eq("tournament_id", tournamentData.id)
+        .order("round_number")
+        .order("scheduled_at"),
+
+      supabase
+        .from("goals")
+        .select("*"),
+    ]);
+
+    if (teamsResult.error) {
+      throw new Error(teamsResult.error.message);
+    }
+
+    if (playersResult.error) {
+      throw new Error(playersResult.error.message);
+    }
+
+    if (matchesResult.error) {
+      throw new Error(matchesResult.error.message);
+    }
+
+    if (goalsResult.error) {
+      throw new Error(goalsResult.error.message);
+    }
+
+    setTeams(teamsResult.data ?? []);
+    setPlayers(playersResult.data ?? []);
+    setMatches(matchesResult.data ?? []);
+
+    setGoals(
+      (goalsResult.data ?? []).filter((goal) =>
+        (matchesResult.data ?? []).some(
+          (match) => match.id === goal.match_id
+        )
+      )
+    );
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Failed to load dashboard."
+    );
+  } finally {
+    setLoading(false);
   }
+}
 
   function openMatchEditor(match: Match) {
     const matchGoals = goals.filter(
@@ -438,6 +466,33 @@ export default function AdminPage() {
   }
 
   async function copyPublicLink() {
+    if (!authorized) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#07090d] px-4 text-white">
+      <div className="w-full max-w-md rounded-2xl border border-red-400/20 bg-red-400/10 p-6 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-400/10 text-red-400">
+          <X size={24} />
+        </div>
+
+        <h1 className="mt-4 text-xl font-bold">
+          Access denied
+        </h1>
+
+        <p className="mt-2 text-sm text-gray-400">
+          {error ||
+            "You are not authorized to manage this tournament."}
+        </p>
+
+        <button
+          onClick={() => router.push("/")}
+          className="mt-6 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-bold text-black transition hover:bg-emerald-400"
+        >
+          Return Home
+        </button>
+      </div>
+    </main>
+  );
+}
     if (!tournament) return;
 
     const url = `${window.location.origin}/t/${tournament.public_slug}`;
@@ -638,6 +693,16 @@ export default function AdminPage() {
           >
             Teams & Players
           </button>
+          <button
+  onClick={() => setActiveTab("gallery")}
+  className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold ${
+    activeTab === "gallery"
+      ? "border-emerald-400 text-emerald-400"
+      : "border-transparent text-gray-500"
+  }`}
+>
+  Gallery
+</button>
         </div>
 
         {activeTab === "fixtures" && (
@@ -860,6 +925,11 @@ export default function AdminPage() {
           </section>
         )}
       </section>
+      {activeTab === "gallery" && tournament && (
+  <GalleryManager
+    tournamentId={tournament.id}
+  />
+)}
 
       {/* Match editor */}
       {editingMatch && (
