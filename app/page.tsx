@@ -98,42 +98,45 @@ export default function HomePage() {
   };
 
   const handleSignUp = async () => {
-    clearMessages();
+  clearMessages();
 
-    if (!adminEmail.trim()) {
-      setError("Enter your admin email.");
-      return;
-    }
+  if (!adminEmail.trim()) {
+    setError("Enter your admin email.");
+    return;
+  }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
+  if (password.length < 6) {
+    setError("Password must be at least 6 characters.");
+    return;
+  }
 
-    setAuthLoading(true);
+  setAuthLoading(true);
 
-    const { data, error } = await supabase.auth.signUp({
-      email: adminEmail.trim(),
-      password,
-    });
+  const { data, error } = await supabase.auth.signUp({
+    email: adminEmail.trim(),
+    password,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
+    },
+  });
 
-    setAuthLoading(false);
+  setAuthLoading(false);
 
-    if (error) {
-      setError(error.message);
-      return;
-    }
+  if (error) {
+    setError(error.message);
+    return;
+  }
 
-    if (!data.session) {
-      setSuccess(
-        "Account created. Check your email to confirm your account, then sign in."
-      );
-      return;
-    }
+  if (!data.session) {
+    setSuccess(
+      "Account created. Check your email to confirm your account, then sign in."
+    );
+    return;
+  }
 
-    setUser(data.user);
-    setSuccess("Account created successfully.");
-  };
+  setUser(data.user);
+  setSuccess("Account created successfully.");
+};
 
   const handleSignIn = async () => {
     clearMessages();

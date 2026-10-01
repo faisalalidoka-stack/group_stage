@@ -6,12 +6,6 @@ export interface GeneratedMatch {
   awayTeamId: string;
 }
 
-/**
- * Generates a standard single round-robin fixture list.
- *
- * Every team plays every other team once.
- * If there is an odd number of teams, a BYE is added internally.
- */
 export function generateRoundRobinSchedule(
   teamIds: string[]
 ): GeneratedMatch[] {
@@ -54,7 +48,7 @@ export function generateRoundRobinSchedule(
 
     const last = rotating.pop();
 
-    if (last) {
+    if (last !== undefined) {
       rotating.unshift(last);
     }
 
@@ -64,14 +58,6 @@ export function generateRoundRobinSchedule(
   return fixtures;
 }
 
-/**
- * Calculates league standings from finished matches.
- *
- * Sorting:
- * 1. Points
- * 2. Goal Difference
- * 3. Goals For
- */
 export function calculateStandings(
   teams: Team[],
   matches: Match[]
@@ -88,7 +74,7 @@ export function calculateStandings(
     goalDiff: 0,
   }));
 
-  const teamMap = new Map(
+  const teamMap = new Map<string, Team>(
     standings.map((team) => [team.id, team])
   );
 
@@ -144,6 +130,10 @@ export function calculateStandings(
       return b.goalDiff - a.goalDiff;
     }
 
-    return b.goalsFor - a.goalsFor;
+    if (b.goalsFor !== a.goalsFor) {
+      return b.goalsFor - a.goalsFor;
+    }
+
+    return a.name.localeCompare(b.name);
   });
 }

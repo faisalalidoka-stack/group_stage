@@ -58,7 +58,6 @@ export interface Match {
   location: string | null;
   refereeName: string | null;
   mvpPlayerId: string | null;
-
   homeTeam?: Team;
   awayTeam?: Team;
 }
