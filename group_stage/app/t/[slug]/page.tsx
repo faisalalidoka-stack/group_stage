@@ -3,6 +3,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -351,6 +352,13 @@ export default function PublicTournamentPage({
     };
   }, [params]);
 
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const matchIdsRef = useRef<Set<string>>(new Set());
+  const reloadTimer = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+
   useEffect(() => {
     if (!slug) {
       return;
@@ -359,7 +367,12 @@ export default function PublicTournamentPage({
     let mounted = true;
 
     async function loadTournament() {
-      setLoading(true);
+      // Only show the skeleton on the first load. Live refreshes
+      // update the page quietly in place.
+      if (reloadKey === 0) {
+        setLoading(true);
+      }
+
       setError(null);
 
       const {
@@ -393,49 +406,48 @@ export default function PublicTournamentPage({
         tournamentRow as TournamentRow
       );
 
-      const [
-        teamsResult,
-        playersResult,
-        matchesResult,
-        galleryResult,
-      ] = await Promise.all([
-        supabase
-          .from("teams")
-          .select(
-            "id, tournament_id, name, logo_url, points, played, won, drawn, lost, goals_for, goals_against, goal_diff"
-          )
-          .eq("tournament_id", tournament.id)
-          .order("name"),
+      const teamsResult = await supabase
+        .from("teams")
+        .select(
+          "id, tournament_id, name, logo_url, points, played, won, drawn, lost, goals_for, goals_against, goal_diff"
+        )
+        .eq("tournament_id", tournament.id)
+        .order("name");
 
-        supabase
-          .from("players")
-          .select(
-            "id, team_id, name, number"
-          )
-          .order("name"),
+      const teamIds = (
+        (teamsResult.data ?? []) as TeamRow[]
+      ).map((team) => team.id);
 
-        supabase
-          .from("matches")
-          .select(
-            "id, tournament_id, home_team_id, away_team_id, home_score, away_score, status, stage, round_number, scheduled_at, location, referee_name, mvp_player_id"
-          )
-          .eq("tournament_id", tournament.id)
-          .order("round_number")
-          .order("scheduled_at", {
-            ascending: true,
-            nullsFirst: true,
-          }),
+      const [playersResult, matchesResult, galleryResult] =
+        await Promise.all([
+          supabase
+            .from("players")
+            .select("id, team_id, name, number")
+            .in("team_id", teamIds)
+            .order("name"),
 
-        supabase
-          .from("gallery_images")
-          .select(
-            "id, tournament_id, image_url, caption, created_at"
-          )
-          .eq("tournament_id", tournament.id)
-          .order("created_at", {
-            ascending: false,
-          }),
-      ]);
+          supabase
+            .from("matches")
+            .select(
+              "id, tournament_id, home_team_id, away_team_id, home_score, away_score, status, stage, round_number, scheduled_at, location, referee_name, mvp_player_id"
+            )
+            .eq("tournament_id", tournament.id)
+            .order("round_number")
+            .order("scheduled_at", {
+              ascending: true,
+              nullsFirst: true,
+            }),
+
+          supabase
+            .from("gallery_images")
+            .select(
+              "id, tournament_id, image_url, caption, created_at"
+            )
+            .eq("tournament_id", tournament.id)
+            .order("created_at", {
+              ascending: false,
+            }),
+        ]);
 
       if (
         teamsResult.error ||
@@ -469,19 +481,14 @@ export default function PublicTournamentPage({
       const mappedMatches = (
         (matchesResult.data ?? []) as MatchRow[]
       )
-        .map((row) =>
-          mapMatch(row, mappedTeams)
-        )
+        .map((row) => mapMatch(row, mappedTeams))
         .filter(
-          (
-            match
-          ): match is PublicMatch =>
-            match !== null
+          (match): match is PublicMatch => match !== null
         );
 
-      const matchIds = mappedMatches.map(
-        (match) => match.id
-      );
+      const matchIds = mappedMatches.map((match) => match.id);
+
+      matchIdsRef.current = new Set(matchIds);
 
       let mappedGoals: Goal[] = [];
 
@@ -489,9 +496,7 @@ export default function PublicTournamentPage({
         const { data: goalsData, error: goalsError } =
           await supabase
             .from("goals")
-            .select(
-              "id, match_id, player_id, minute"
-            )
+            .select("id, match_id, player_id, minute")
             .in("match_id", matchIds);
 
         if (goalsError) {
@@ -503,14 +508,14 @@ export default function PublicTournamentPage({
           return;
         }
 
-        mappedGoals = (
-          (goalsData ?? []) as GoalRow[]
-        ).map((row) => ({
-          id: row.id,
-          matchId: row.match_id,
-          playerId: row.player_id,
-          minute: row.minute,
-        }));
+        mappedGoals = ((goalsData ?? []) as GoalRow[]).map(
+          (row) => ({
+            id: row.id,
+            matchId: row.match_id,
+            playerId: row.player_id,
+            minute: row.minute,
+          })
+        );
       }
 
       if (!mounted) {
@@ -523,27 +528,71 @@ export default function PublicTournamentPage({
       setMatches(mappedMatches);
       setGoals(mappedGoals);
       setGallery(
-        (
-          (galleryResult.data ?? []) as GalleryRow[]
-        ).map(mapGallery)
+        ((galleryResult.data ?? []) as GalleryRow[]).map(
+          mapGallery
+        )
       );
       setLoading(false);
     }
 
     void loadTournament();
 
+    return () => {
+      mounted = false;
+    };
+  }, [slug, reloadKey]);
+
+  const tournamentId = tournament?.id;
+
+  useEffect(() => {
+    if (!tournamentId) {
+      return;
+    }
+
+    const scheduleReload = () => {
+      if (reloadTimer.current) {
+        clearTimeout(reloadTimer.current);
+      }
+
+      // A single admin save fires several row events;
+      // wait briefly and refresh once.
+      reloadTimer.current = setTimeout(
+        () => setReloadKey((key) => key + 1),
+        400
+      );
+    };
+
     const channel = supabase
-      .channel(`public-tournament-${slug}`)
+      .channel(`public-tournament-${tournamentId}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "matches",
+          filter: `tournament_id=eq.${tournamentId}`,
         },
-        () => {
-          void loadTournament();
-        }
+        scheduleReload
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "teams",
+          filter: `tournament_id=eq.${tournamentId}`,
+        },
+        scheduleReload
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "gallery_images",
+          filter: `tournament_id=eq.${tournamentId}`,
+        },
+        scheduleReload
       )
       .on(
         "postgres_changes",
@@ -552,17 +601,33 @@ export default function PublicTournamentPage({
           schema: "public",
           table: "goals",
         },
-        () => {
-          void loadTournament();
+        (payload) => {
+          const row = {
+            ...(payload.old ?? {}),
+            ...(payload.new ?? {}),
+          } as { match_id?: string };
+
+          // Ignore goals that belong to other tournaments.
+          if (
+            row.match_id &&
+            !matchIdsRef.current.has(row.match_id)
+          ) {
+            return;
+          }
+
+          scheduleReload();
         }
       )
       .subscribe();
 
     return () => {
-      mounted = false;
+      if (reloadTimer.current) {
+        clearTimeout(reloadTimer.current);
+      }
+
       void supabase.removeChannel(channel);
     };
-  }, [slug]);
+  }, [tournamentId]);
 
   const standings = useMemo(() => {
     return calculateStandings(

@@ -1,6 +1,7 @@
 "use client";
 
 
+import TeamsManager from "@/components/admin/TeamsManager";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -861,69 +862,14 @@ export default function AdminPage() {
           </section>
         )}
 
-        {activeTab === "teams" && (
-          <section className="mt-6">
-            <div className="grid gap-4 md:grid-cols-2">
-              {teams.map((team) => {
-                const teamPlayers = players.filter(
-                  (player) =>
-                    player.team_id === team.id
-                );
-
-                return (
-                  <div
-                    key={team.id}
-                    className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-400">
-                        <Users size={20} />
-                      </div>
-
-                      <div>
-                        <h3 className="font-bold">
-                          {team.name}
-                        </h3>
-
-                        <p className="text-xs text-gray-500">
-                          {teamPlayers.length} player
-                          {teamPlayers.length === 1
-                            ? ""
-                            : "s"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-5 space-y-2">
-                      {teamPlayers.length === 0 ? (
-                        <p className="rounded-lg bg-black/20 px-3 py-3 text-sm text-gray-600">
-                          No players registered yet.
-                        </p>
-                      ) : (
-                        teamPlayers.map((player) => (
-                          <div
-                            key={player.id}
-                            className="flex items-center justify-between rounded-lg bg-black/20 px-3 py-2"
-                          >
-                            <span className="text-sm">
-                              {player.name}
-                            </span>
-
-                            {player.number !== null && (
-                              <span className="text-xs text-gray-500">
-                                #{player.number}
-                              </span>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
+        {activeTab === "teams" && tournament && (
+  <TeamsManager
+    tournamentId={tournament.id}
+    teams={teams}
+    players={players}
+    onChanged={loadDashboard}
+  />
+)}
       </section>
       {activeTab === "gallery" && tournament && (
   <GalleryManager

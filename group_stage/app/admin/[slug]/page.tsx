@@ -1,8 +1,10 @@
 "use client";
 
+
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
+  ArrowLeft,
   Calendar,
   Check,
   Clock,
@@ -17,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
+import GalleryManager from "@/components/admin/GalleryManager";
 
 type Team = {
   id: string;
@@ -57,11 +60,11 @@ type Goal = {
 
 type Tournament = {
   id: string;
+  admin_id: string;
   name: string;
   public_slug: string;
   format: string;
 };
-
 type MatchEditor = {
   match: Match;
   homeScore: number;
@@ -94,6 +97,7 @@ export default function AdminPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [denied, setDenied] = useState(false);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -104,9 +108,8 @@ export default function AdminPage() {
   const [editingGoals, setEditingGoals] = useState<GoalEditor[]>([]);
 
   const [activeTab, setActiveTab] = useState<
-    "fixtures" | "teams"
-  >("fixtures");
-
+  "fixtures" | "teams" | "gallery"
+>("fixtures");
   const teamMap = useMemo(() => {
     return new Map(teams.map((team) => [team.id, team]));
   }, [teams]);
@@ -146,35 +149,46 @@ export default function AdminPage() {
     setSuccess("");
   };
 
-  async function loadDashboard() {
-    setLoading(true);
+  async function loadDashboard(silent = false) {
+    if (!silent) setLoading(true);
     clearMessages();
+    setDenied(false);
 
     try {
       const {
-        data: tournamentData,
-        error: tournamentError,
-      } = await supabase
-        .from("tournaments")
-        .select("*")
-        .eq("public_slug", slug)
-        .single();
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      if (tournamentError || !tournamentData) {
-        throw new Error(
-          tournamentError?.message ||
-            "Tournament not found."
-        );
+      if (userError || !user) {
+        router.replace("/");
+        return;
+      }
+
+      const { data: tournamentData, error: tournamentError } =
+        await supabase
+          .from("tournaments")
+          .select("*")
+          .eq("public_slug", slug)
+          .maybeSingle();
+
+      if (tournamentError) {
+        throw new Error(tournamentError.message);
+      }
+
+      if (!tournamentData) {
+        throw new Error("Tournament not found.");
+      }
+
+      if (tournamentData.admin_id !== user.id) {
+        setTournament(null);
+        setDenied(true);
+        return;
       }
 
       setTournament(tournamentData);
 
-      const [
-        teamsResult,
-        playersResult,
-        matchesResult,
-        goalsResult,
-      ] = await Promise.all([
+      const [teamsResult, matchesResult] = await Promise.all([
         supabase
           .from("teams")
           .select("*")
@@ -182,50 +196,57 @@ export default function AdminPage() {
           .order("name"),
 
         supabase
-          .from("players")
-          .select("*")
-          .order("team_id")
-          .order("number"),
-
-        supabase
           .from("matches")
           .select("*")
           .eq("tournament_id", tournamentData.id)
           .order("round_number")
           .order("scheduled_at"),
-
-        supabase
-          .from("goals")
-          .select("*"),
       ]);
 
       if (teamsResult.error) {
         throw new Error(teamsResult.error.message);
       }
 
-      if (playersResult.error) {
-        throw new Error(playersResult.error.message);
-      }
-
       if (matchesResult.error) {
         throw new Error(matchesResult.error.message);
+      }
+
+      const teamRows = teamsResult.data ?? [];
+      const matchRows = matchesResult.data ?? [];
+
+      const teamIds = teamRows.map((team) => team.id);
+      const matchIds = matchRows.map((match) => match.id);
+
+      const [playersResult, goalsResult] = await Promise.all([
+        teamIds.length > 0
+          ? supabase
+              .from("players")
+              .select("*")
+              .in("team_id", teamIds)
+              .order("team_id")
+              .order("number")
+          : Promise.resolve({ data: [], error: null }),
+
+        matchIds.length > 0
+          ? supabase
+              .from("goals")
+              .select("*")
+              .in("match_id", matchIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      if (playersResult.error) {
+        throw new Error(playersResult.error.message);
       }
 
       if (goalsResult.error) {
         throw new Error(goalsResult.error.message);
       }
 
-      setTeams(teamsResult.data ?? []);
+      setTeams(teamRows);
+      setMatches(matchRows);
       setPlayers(playersResult.data ?? []);
-      setMatches(matchesResult.data ?? []);
-
-      setGoals(
-        (goalsResult.data ?? []).filter((goal) =>
-          (matchesResult.data ?? []).some(
-            (match) => match.id === goal.match_id
-          )
-        )
-      );
+      setGoals(goalsResult.data ?? []);
     } catch (err) {
       setError(
         err instanceof Error
@@ -370,62 +391,43 @@ export default function AdminPage() {
         );
       }
 
-      const { error: matchError } = await supabase
-        .from("matches")
-        .update({
-          home_score: editingMatch.homeScore,
-          away_score: editingMatch.awayScore,
-          status: editingMatch.status,
-          location:
-            editingMatch.location.trim() || null,
-          referee_name:
-            editingMatch.refereeName.trim() || null,
-          scheduled_at:
-            editingMatch.scheduledAt
-              ? new Date(
-                  editingMatch.scheduledAt
-                ).toISOString()
-              : null,
-          mvp_player_id:
-            editingMatch.mvpPlayerId || null,
-        })
-        .eq("id", match.id);
-
-      if (matchError) {
-        throw new Error(matchError.message);
-      }
-
-      const { error: deleteGoalsError } = await supabase
-        .from("goals")
-        .delete()
-        .eq("match_id", match.id);
-
-      if (deleteGoalsError) {
-        throw new Error(deleteGoalsError.message);
-      }
-
-      if (validGoals.length > 0) {
-        const goalPayload = validGoals.map((goal) => ({
-          match_id: match.id,
-          player_id: goal.playerId,
-          minute: goal.minute,
-        }));
-
-        const { error: goalsError } = await supabase
-          .from("goals")
-          .insert(goalPayload);
-
-        if (goalsError) {
-          throw new Error(goalsError.message);
+      const { error: saveError } = await supabase.rpc(
+        "save_match_result",
+        {
+          p_match_id: match.id,
+          p_home: editingMatch.homeScore,
+          p_away: editingMatch.awayScore,
+          p_status: editingMatch.status,
+          p_location: editingMatch.location.trim() || null,
+          p_referee: editingMatch.refereeName.trim() || null,
+          p_scheduled: editingMatch.scheduledAt
+            ? new Date(editingMatch.scheduledAt).toISOString()
+            : null,
+          p_mvp: editingMatch.mvpPlayerId || null,
+          p_goals: validGoals.map((goal) => ({
+            player_id: goal.playerId,
+            minute: goal.minute,
+          })),
         }
+      );
+
+      if (saveError) {
+        throw new Error(saveError.message);
       }
 
-      await loadDashboard();
+      const totalScore =
+        editingMatch.homeScore + editingMatch.awayScore;
+
+      await loadDashboard(true);
 
       setEditingMatch(null);
       setEditingGoals([]);
 
-      setSuccess("Match updated successfully.");
+      setSuccess(
+        validGoals.length > 0 && validGoals.length !== totalScore
+          ? `Match updated. Note: ${validGoals.length} goal(s) listed but the score adds up to ${totalScore}.`
+          : "Match updated successfully."
+      );
     } catch (err) {
       setError(
         err instanceof Error
@@ -492,6 +494,31 @@ export default function AdminPage() {
     );
   }
 
+  if (denied) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#07090d] px-4 text-white">
+        <div className="w-full max-w-md rounded-2xl border border-red-400/20 bg-red-400/10 p-6 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-400/10 text-red-400">
+            <X size={24} />
+          </div>
+
+          <h1 className="mt-4 text-xl font-bold">Access denied</h1>
+
+          <p className="mt-2 text-sm text-gray-400">
+            You are not authorized to manage this tournament.
+          </p>
+
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="mt-6 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-bold text-black transition hover:bg-emerald-400"
+          >
+            My Tournaments
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   if (!tournament) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#07090d] px-4 text-white">
@@ -516,6 +543,14 @@ export default function AdminPage() {
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="mb-3 flex items-center gap-2 text-sm text-gray-400 hover:text-white"
+              >
+                <ArrowLeft size={16} />
+                My Tournaments
+              </button>
+
               <div className="flex items-center gap-2">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500 text-black">
                   <Trophy size={19} />
@@ -538,17 +573,6 @@ export default function AdminPage() {
               >
                 <Copy size={16} />
                 Public Link
-              </button>
-
-              <button
-                onClick={() =>
-                  router.push(
-                    `/admin/${tournament.public_slug}/manage`
-                  )
-                }
-                className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold transition hover:bg-white/5"
-              >
-                Manage Teams
               </button>
 
               <button
@@ -649,6 +673,16 @@ export default function AdminPage() {
           >
             Teams & Players
           </button>
+          <button
+  onClick={() => setActiveTab("gallery")}
+  className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold ${
+    activeTab === "gallery"
+      ? "border-emerald-400 text-emerald-400"
+      : "border-transparent text-gray-500"
+  }`}
+>
+  Gallery
+</button>
         </div>
 
         {activeTab === "fixtures" && (
@@ -809,6 +843,18 @@ export default function AdminPage() {
 
         {activeTab === "teams" && (
           <section className="mt-6">
+            <div className="mb-4 flex justify-end">
+              <button
+                onClick={() =>
+                  router.push(`/admin/${tournament.public_slug}/manage`)
+                }
+                className="flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-bold text-black hover:bg-emerald-400"
+              >
+                <Users size={16} />
+                Manage teams &amp; players
+              </button>
+            </div>
+
             <div className="grid gap-4 md:grid-cols-2">
               {teams.map((team) => {
                 const teamPlayers = players.filter(
@@ -871,6 +917,11 @@ export default function AdminPage() {
           </section>
         )}
       </section>
+      {activeTab === "gallery" && tournament && (
+  <GalleryManager
+    tournamentId={tournament.id}
+  />
+)}
 
       {/* Match editor */}
       {editingMatch && (
