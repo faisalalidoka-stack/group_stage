@@ -23,7 +23,6 @@ import {
   type Notice,
   type Player,
   type Team,
-  type TournamentInfo,
 } from "@/lib/squad";
 import {
   removeImageByUrl,
@@ -33,7 +32,7 @@ import {
 import Avatar from "./Avatar";
 
 type TeamsPanelProps = {
-  tournament: TournamentInfo;
+  tournamentId: string;
   teams: Team[];
   players: Player[];
   setTeams: Dispatch<SetStateAction<Team[]>>;
@@ -42,7 +41,7 @@ type TeamsPanelProps = {
 };
 
 export default function TeamsPanel({
-  tournament,
+  tournamentId,
   teams,
   players,
   setTeams,
@@ -77,7 +76,7 @@ export default function TeamsPanel({
 
     const { data, error } = await supabase
       .from("teams")
-      .insert({ tournament_id: tournament.id, name })
+      .insert({ tournament_id: tournamentId, name })
       .select()
       .single();
 
@@ -150,7 +149,7 @@ export default function TeamsPanel({
     setBusyId(team.id);
 
     try {
-      const url = await uploadImage(tournament.id, "teams", file);
+      const url = await uploadImage(tournamentId, "teams", file);
 
       const { data, error } = await supabase
         .from("teams")

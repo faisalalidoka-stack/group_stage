@@ -12,7 +12,7 @@ Next.js 16 · React 19 · Supabase · Tailwind 4
    NEXT_PUBLIC_SUPABASE_URL=...
    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
    ```
-3. In the Supabase SQL Editor run, in order: `supabase/policies.sql` (skip if already applied), `supabase/phase1.sql`, `supabase/phase2.sql`.
+3. In the Supabase SQL Editor run, in order: `supabase/policies.sql` (skip if already applied), `supabase/phase1.sql`, `supabase/phase2.sql`, `supabase/phase3.sql` (all safe to re-run after the first policies.sql).
 4. Supabase > Authentication > URL Configuration: add `http://localhost:3000/auth/callback`
    (and your production URL) to Redirect URLs.
 5. `npm run dev`
@@ -22,6 +22,6 @@ Next.js 16 · React 19 · Supabase · Tailwind 4
 - `/` sign in, create account, forgot password
 - `/dashboard` My Tournaments
 - `/dashboard/new` create a tournament
-- `/admin/[slug]` tournament dashboard (owner only)
-- `/admin/[slug]/manage` Squad Manager (teams, crests, players, photos, bulk add)
+- `/admin/[slug]` tournament dashboard (owner only); the Teams tab is the Squad Manager (teams, crests, players, photos, bulk add); the Registration tab manages registration links and the approval queue
+- `/register/[token]` public team-captain registration page (no account needed)
 - `/t/[slug]` public tournament page

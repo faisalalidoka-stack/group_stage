@@ -14,26 +14,14 @@ import {
   Pencil,
   Trophy,
   UserCheck,
-  Users,
   X,
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
 import GalleryManager from "@/components/admin/GalleryManager";
-
-type Team = {
-  id: string;
-  tournament_id: string;
-  name: string;
-  logo_url: string | null;
-};
-
-type Player = {
-  id: string;
-  team_id: string;
-  name: string;
-  number: number | null;
-};
+import SquadManager from "@/components/squad/SquadManager";
+import RegistrationManager from "@/components/squad/RegistrationManager";
+import type { Player, Team } from "@/lib/squad";
 
 type Match = {
   id: string;
@@ -108,8 +96,9 @@ export default function AdminPage() {
   const [editingGoals, setEditingGoals] = useState<GoalEditor[]>([]);
 
   const [activeTab, setActiveTab] = useState<
-  "fixtures" | "teams" | "gallery"
+  "fixtures" | "teams" | "registration" | "gallery"
 >("fixtures");
+  const [pendingSubmissions, setPendingSubmissions] = useState(0);
   const teamMap = useMemo(() => {
     return new Map(teams.map((team) => [team.id, team]));
   }, [teams]);
@@ -247,6 +236,17 @@ export default function AdminPage() {
       setMatches(matchRows);
       setPlayers(playersResult.data ?? []);
       setGoals(goalsResult.data ?? []);
+
+      // Badge on the Registration tab. Ignored if phase3.sql has not run yet.
+      const pending = await supabase
+        .from("player_registration_submissions")
+        .select("id", { count: "exact", head: true })
+        .eq("tournament_id", tournamentData.id)
+        .eq("status", "PENDING");
+
+      if (!pending.error) {
+        setPendingSubmissions(pending.count ?? 0);
+      }
     } catch (err) {
       setError(
         err instanceof Error
@@ -674,6 +674,21 @@ export default function AdminPage() {
             Teams & Players
           </button>
           <button
+            onClick={() => setActiveTab("registration")}
+            className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold ${
+              activeTab === "registration"
+                ? "border-emerald-400 text-emerald-400"
+                : "border-transparent text-gray-500"
+            }`}
+          >
+            Registration
+            {pendingSubmissions > 0 && (
+              <span className="ml-2 rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-bold text-black">
+                {pendingSubmissions}
+              </span>
+            )}
+          </button>
+          <button
   onClick={() => setActiveTab("gallery")}
   className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold ${
     activeTab === "gallery"
@@ -842,79 +857,22 @@ export default function AdminPage() {
         )}
 
         {activeTab === "teams" && (
-          <section className="mt-6">
-            <div className="mb-4 flex justify-end">
-              <button
-                onClick={() =>
-                  router.push(`/admin/${tournament.public_slug}/manage`)
-                }
-                className="flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-bold text-black hover:bg-emerald-400"
-              >
-                <Users size={16} />
-                Manage teams &amp; players
-              </button>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              {teams.map((team) => {
-                const teamPlayers = players.filter(
-                  (player) =>
-                    player.team_id === team.id
-                );
-
-                return (
-                  <div
-                    key={team.id}
-                    className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-400">
-                        <Users size={20} />
-                      </div>
-
-                      <div>
-                        <h3 className="font-bold">
-                          {team.name}
-                        </h3>
-
-                        <p className="text-xs text-gray-500">
-                          {teamPlayers.length} player
-                          {teamPlayers.length === 1
-                            ? ""
-                            : "s"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-5 space-y-2">
-                      {teamPlayers.length === 0 ? (
-                        <p className="rounded-lg bg-black/20 px-3 py-3 text-sm text-gray-600">
-                          No players registered yet.
-                        </p>
-                      ) : (
-                        teamPlayers.map((player) => (
-                          <div
-                            key={player.id}
-                            className="flex items-center justify-between rounded-lg bg-black/20 px-3 py-2"
-                          >
-                            <span className="text-sm">
-                              {player.name}
-                            </span>
-
-                            {player.number !== null && (
-                              <span className="text-xs text-gray-500">
-                                #{player.number}
-                              </span>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+          <SquadManager
+            tournamentId={tournament.id}
+            teams={teams}
+            players={players}
+            setTeams={setTeams}
+            setPlayers={setPlayers}
+          />
+        )}
+        {activeTab === "registration" && (
+          <RegistrationManager
+            tournamentId={tournament.id}
+            tournamentName={tournament.name}
+            teams={teams}
+            setPlayers={setPlayers}
+            onPendingChange={setPendingSubmissions}
+          />
         )}
       </section>
       {activeTab === "gallery" && tournament && (

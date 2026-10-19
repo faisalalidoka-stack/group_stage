@@ -248,7 +248,7 @@ with check (
   and exists (
     select 1
     from tournaments t
-    where t.id = split_part(name, '/', 1)::uuid
+    where t.id::text = split_part(objects.name, '/', 1)
       and t.admin_id = auth.uid()
   )
 );
@@ -261,7 +261,7 @@ using (
   and exists (
     select 1
     from tournaments t
-    where t.id = split_part(name, '/', 1)::uuid
+    where t.id::text = split_part(objects.name, '/', 1)
       and t.admin_id = auth.uid()
   )
 )
@@ -270,7 +270,7 @@ with check (
   and exists (
     select 1
     from tournaments t
-    where t.id = split_part(name, '/', 1)::uuid
+    where t.id::text = split_part(objects.name, '/', 1)
       and t.admin_id = auth.uid()
   )
 );
@@ -283,7 +283,7 @@ using (
   and exists (
     select 1
     from tournaments t
-    where t.id = split_part(name, '/', 1)::uuid
+    where t.id::text = split_part(objects.name, '/', 1)
       and t.admin_id = auth.uid()
   )
 );

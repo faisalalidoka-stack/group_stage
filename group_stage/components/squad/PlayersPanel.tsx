@@ -28,7 +28,6 @@ import {
   type Notice,
   type Player,
   type Team,
-  type TournamentInfo,
 } from "@/lib/squad";
 import {
   removeImageByUrl,
@@ -38,7 +37,7 @@ import {
 import Avatar from "./Avatar";
 
 type PlayersPanelProps = {
-  tournament: TournamentInfo;
+  tournamentId: string;
   teams: Team[];
   players: Player[];
   setPlayers: Dispatch<SetStateAction<Player[]>>;
@@ -66,7 +65,7 @@ function parseBulk(text: string) {
 }
 
 export default function PlayersPanel({
-  tournament,
+  tournamentId,
   teams,
   players,
   setPlayers,
@@ -167,7 +166,7 @@ export default function PlayersPanel({
 
     try {
       if (photo) {
-        photoUrl = await uploadImage(tournament.id, "players", photo);
+        photoUrl = await uploadImage(tournamentId, "players", photo);
       }
 
       const { data, error } = await supabase
@@ -384,7 +383,7 @@ export default function PlayersPanel({
     setBusyId(player.id);
 
     try {
-      const url = await uploadImage(tournament.id, "players", file);
+      const url = await uploadImage(tournamentId, "players", file);
 
       const { data, error } = await supabase
         .from("players")
