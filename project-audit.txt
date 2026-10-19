@@ -1,0 +1,422 @@
+PROJECT STRUCTURE
+.gitignore
+AGENTS.md
+CLAUDE.md
+eslint.config.mjs
+next-env.d.ts
+next.config.ts
+package-lock.json
+package.json
+postcss.config.mjs
+README.md
+tsconfig.json
+tsconfig.tsbuildinfo
+app\favicon.ico
+app\globals.css
+app\layout.tsx
+app\page.tsx
+app\admin\[slug]\page.tsx
+app\auth\callback\route.ts
+app\t\[slug]\page.tsx
+components\admin\GalleryManager.tsx
+components\admin\TeamsManager.tsx
+group_stage\.env.example
+group_stage\.gitignore
+group_stage\AGENTS.md
+group_stage\CLAUDE.md
+group_stage\eslint.config.mjs
+group_stage\next-env.d.ts
+group_stage\next.config.ts
+group_stage\package-lock.json
+group_stage\package.json
+group_stage\postcss.config.mjs
+group_stage\README.md
+group_stage\tsconfig.json
+group_stage\tsconfig.tsbuildinfo
+group_stage\app\favicon.ico
+group_stage\app\globals.css
+group_stage\app\layout.tsx
+group_stage\app\page.tsx
+group_stage\app\admin\[slug]\page.tsx
+group_stage\app\admin\[slug]\manage\page.tsx
+group_stage\app\auth\callback\page.tsx
+group_stage\app\auth\reset\page.tsx
+group_stage\app\dashboard\page.tsx
+group_stage\app\dashboard\new\page.tsx
+group_stage\app\register\[token]\page.tsx
+group_stage\app\t\[slug]\page.tsx
+group_stage\components\admin\GalleryManager.tsx
+group_stage\components\squad\Avatar.tsx
+group_stage\components\squad\PlayersPanel.tsx
+group_stage\components\squad\RegistrationManager.tsx
+group_stage\components\squad\SquadManager.tsx
+group_stage\components\squad\TeamsPanel.tsx
+group_stage\lib\algorithms.ts
+group_stage\lib\registration.ts
+group_stage\lib\squad.ts
+group_stage\lib\storage.ts
+group_stage\lib\supabase.ts
+group_stage\lib\useRequireUser.ts
+group_stage\public\file.svg
+group_stage\public\globe.svg
+group_stage\public\next.svg
+group_stage\public\vercel.svg
+group_stage\public\window.svg
+group_stage\supabase\phase1.sql
+group_stage\supabase\phase2.sql
+group_stage\supabase\phase3.sql
+group_stage\supabase\policies.sql
+group_stage\types\index.ts
+lib\algorithms.ts
+lib\supabase.ts
+public\file.svg
+public\globe.svg
+public\next.svg
+public\vercel.svg
+public\window.svg
+types\index.ts
+
+PACKAGE.JSON
+{
+  "name": "group_stage",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
+    "lucide-react": "^1.49.0",
+    "next": "16.3.8",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.8",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
+
+DATABASE AND FEATURE REFERENCES
+app\page.tsx:244: .from("tournaments")
+app\page.tsx:246: admin_id: user.id,
+app\page.tsx:249: public_slug: slug,
+app\page.tsx:269: .from("teams")
+app\page.tsx:275: .from("tournaments")
+app\page.tsx:310: .from("matches")
+app\page.tsx:315: .from("tournaments")
+app\admin\[slug]\page.tsx:63: admin_id: string;
+app\admin\[slug]\page.tsx:65: public_slug: string;
+app\admin\[slug]\page.tsx:174: .from("tournaments")
+app\admin\[slug]\page.tsx:176: .eq("public_slug", slug)
+app\admin\[slug]\page.tsx:187: if (tournamentData.admin_id !== user.id) {
+app\admin\[slug]\page.tsx:208: .from("teams")
+app\admin\[slug]\page.tsx:214: .from("players")
+app\admin\[slug]\page.tsx:220: .from("matches")
+app\admin\[slug]\page.tsx:227: .from("goals")
+app\admin\[slug]\page.tsx:403: .from("matches")
+app\admin\[slug]\page.tsx:428: .from("goals")
+app\admin\[slug]\page.tsx:444: .from("goals")
+app\admin\[slug]\page.tsx:499: const url = `${window.location.origin}/t/${tournament.public_slug}`;
+app\admin\[slug]\page.tsx:602: `/t/${tournament.public_slug}`
+app\auth\callback\route.ts:2: import { createClient } from "@supabase/supabase-js";
+app\auth\callback\route.ts:11: const supabase = createClient(
+app\t\[slug]\page.tsx:36: admin_id: string;
+app\t\[slug]\page.tsx:39: public_slug: string;
+app\t\[slug]\page.tsx:123: adminId: row.admin_id,
+app\t\[slug]\page.tsx:129: publicSlug: row.public_slug,
+app\t\[slug]\page.tsx:369: .from("tournaments")
+app\t\[slug]\page.tsx:371: "id, admin_id, name, format, public_slug, created_at"
+app\t\[slug]\page.tsx:373: .eq("public_slug", slug)
+app\t\[slug]\page.tsx:403: .from("teams")
+app\t\[slug]\page.tsx:411: .from("players")
+app\t\[slug]\page.tsx:418: .from("matches")
+app\t\[slug]\page.tsx:430: .from("gallery_images")
+app\t\[slug]\page.tsx:491: .from("goals")
+components\admin\GalleryManager.tsx:54: .from("gallery_images")
+components\admin\GalleryManager.tsx:156: .from("league-gallery")
+components\admin\GalleryManager.tsx:170: .from("league-gallery")
+components\admin\GalleryManager.tsx:175: .from("gallery_images")
+components\admin\GalleryManager.tsx:186: .from("league-gallery")
+components\admin\GalleryManager.tsx:241: .from("league-gallery")
+components\admin\GalleryManager.tsx:249: .from("gallery_images")
+components\admin\TeamsManager.tsx:145: .from("teams")
+components\admin\TeamsManager.tsx:210: .from("teams")
+components\admin\TeamsManager.tsx:244: .from("matches")
+components\admin\TeamsManager.tsx:289: .from("teams")
+components\admin\TeamsManager.tsx:358: .from("players")
+components\admin\TeamsManager.tsx:456: .from("players")
+components\admin\TeamsManager.tsx:494: .from("goals")
+components\admin\TeamsManager.tsx:528: .from("players")
+group_stage\app\admin\[slug]\page.tsx:23: import RegistrationManager from "@/components/squad/RegistrationManager";
+group_stage\app\admin\[slug]\page.tsx:51: admin_id: string;
+group_stage\app\admin\[slug]\page.tsx:53: public_slug: string;
+group_stage\app\admin\[slug]\page.tsx:99: "fixtures" | "teams" | "registration" | "gallery"
+group_stage\app\admin\[slug]\page.tsx:159: .from("tournaments")
+group_stage\app\admin\[slug]\page.tsx:161: .eq("public_slug", slug)
+group_stage\app\admin\[slug]\page.tsx:172: if (tournamentData.admin_id !== user.id) {
+group_stage\app\admin\[slug]\page.tsx:182: .from("teams")
+group_stage\app\admin\[slug]\page.tsx:188: .from("matches")
+group_stage\app\admin\[slug]\page.tsx:212: .from("players")
+group_stage\app\admin\[slug]\page.tsx:221: .from("goals")
+group_stage\app\admin\[slug]\page.tsx:240: // Badge on the Registration tab. Ignored if phase3.sql has not run yet.
+group_stage\app\admin\[slug]\page.tsx:242: .from("player_registration_submissions")
+group_stage\app\admin\[slug]\page.tsx:445: const url = `${window.location.origin}/t/${tournament.public_slug}`;
+group_stage\app\admin\[slug]\page.tsx:581: `/t/${tournament.public_slug}`
+group_stage\app\admin\[slug]\page.tsx:677: onClick={() => setActiveTab("registration")}
+group_stage\app\admin\[slug]\page.tsx:679: activeTab === "registration"
+group_stage\app\admin\[slug]\page.tsx:684: Registration
+group_stage\app\admin\[slug]\page.tsx:868: {activeTab === "registration" && (
+group_stage\app\admin\[slug]\page.tsx:869: <RegistrationManager
+group_stage\app\admin\[slug]\manage\page.tsx:51: .from("tournaments")
+group_stage\app\admin\[slug]\manage\page.tsx:52: .select("id, name, public_slug, admin_id")
+group_stage\app\admin\[slug]\manage\page.tsx:53: .eq("public_slug", slug)
+group_stage\app\admin\[slug]\manage\page.tsx:64: if (t.admin_id !== user.id) {
+group_stage\app\admin\[slug]\manage\page.tsx:71: .from("teams")
+group_stage\app\admin\[slug]\manage\page.tsx:87: .from("players")
+group_stage\app\dashboard\page.tsx:25: public_slug: string;
+group_stage\app\dashboard\page.tsx:27: archived_at: string | null;
+group_stage\app\dashboard\page.tsx:59: .from("tournaments")
+group_stage\app\dashboard\page.tsx:61: .eq("admin_id", adminId)
+group_stage\app\dashboard\page.tsx:78: .from("teams")
+group_stage\app\dashboard\page.tsx:82: .from("matches")
+group_stage\app\dashboard\page.tsx:120: `${window.location.origin}/t/${row.public_slug}`
+group_stage\app\dashboard\page.tsx:132: .from("tournaments")
+group_stage\app\dashboard\page.tsx:134: archived_at: archived ? new Date().toISOString() : null,
+group_stage\app\dashboard\page.tsx:150: archived_at: archived ? new Date().toISOString() : null,
+group_stage\app\dashboard\page.tsx:204: showArchived ? row.archived_at : !row.archived_at
+group_stage\app\dashboard\page.tsx:208: (row) => row.archived_at
+group_stage\app\dashboard\page.tsx:335: router.push(`/admin/${row.public_slug}`)
+group_stage\app\dashboard\page.tsx:345: router.push(`/t/${row.public_slug}`)
+group_stage\app\dashboard\page.tsx:363: setArchived(row, !row.archived_at)
+group_stage\app\dashboard\page.tsx:366: title={row.archived_at ? "Restore" : "Archive"}
+group_stage\app\dashboard\page.tsx:369: {row.archived_at ? (
+group_stage\app\register\[token]\page.tsx:15: import { uploadRegistrationPhoto, validateImage } from "@/lib/storage";
+group_stage\app\register\[token]\page.tsx:40: not_found: "This registration link is not valid. Check that you copied the whole link.",
+group_stage\app\register\[token]\page.tsx:41: revoked: "This registration link has been closed by the organiser.",
+group_stage\app\register\[token]\page.tsx:42: expired: "This registration link has expired. Ask the organiser for a new one.",
+group_stage\app\register\[token]\page.tsx:68: "get_registration_link",
+group_stage\app\register\[token]\page.tsx:163: ? await uploadRegistrationPhoto(token, item.row.photo)
+group_stage\app\register\[token]\page.tsx:174: "submit_registration",
+group_stage\app\register\[token]\page.tsx:221: <h1 className="text-xl font-bold">Registration unavailable</h1>
+group_stage\app\t\[slug]\page.tsx:37: admin_id: string;
+group_stage\app\t\[slug]\page.tsx:40: public_slug: string;
+group_stage\app\t\[slug]\page.tsx:124: adminId: row.admin_id,
+group_stage\app\t\[slug]\page.tsx:130: publicSlug: row.public_slug,
+group_stage\app\t\[slug]\page.tsx:382: .from("tournaments")
+group_stage\app\t\[slug]\page.tsx:384: "id, admin_id, name, format, public_slug, created_at"
+group_stage\app\t\[slug]\page.tsx:386: .eq("public_slug", slug)
+group_stage\app\t\[slug]\page.tsx:410: .from("teams")
+group_stage\app\t\[slug]\page.tsx:424: .from("players")
+group_stage\app\t\[slug]\page.tsx:430: .from("matches")
+group_stage\app\t\[slug]\page.tsx:442: .from("gallery_images")
+group_stage\app\t\[slug]\page.tsx:498: .from("goals")
+group_stage\app\t\[slug]\page.tsx:592: table: "gallery_images",
+group_stage\components\admin\GalleryManager.tsx:50: .from("gallery_images")
+group_stage\components\admin\GalleryManager.tsx:161: .from("league-gallery")
+group_stage\components\admin\GalleryManager.tsx:175: .from("league-gallery")
+group_stage\components\admin\GalleryManager.tsx:180: .from("gallery_images")
+group_stage\components\admin\GalleryManager.tsx:191: .from("league-gallery")
+group_stage\components\admin\GalleryManager.tsx:246: .from("league-gallery")
+group_stage\components\admin\GalleryManager.tsx:254: .from("gallery_images")
+group_stage\components\squad\PlayersPanel.tsx:173: .from("players")
+group_stage\components\squad\PlayersPanel.tsx:254: .from("players")
+group_stage\components\squad\PlayersPanel.tsx:289: .from("goals")
+group_stage\components\squad\PlayersPanel.tsx:293: .from("matches")
+group_stage\components\squad\PlayersPanel.tsx:346: .from("players")
+group_stage\components\squad\PlayersPanel.tsx:389: .from("players")
+group_stage\components\squad\PlayersPanel.tsx:418: .from("players")
+group_stage\components\squad\PlayersPanel.tsx:454: .from("players")
+group_stage\components\squad\RegistrationManager.tsx:25: registrationUrl,
+group_stage\components\squad\RegistrationManager.tsx:28: type RegistrationLink,
+group_stage\components\squad\RegistrationManager.tsx:31: } from "@/lib/registration";
+group_stage\components\squad\RegistrationManager.tsx:53: export default function RegistrationManager({
+group_stage\components\squad\RegistrationManager.tsx:60: const [links, setLinks] = useState<RegistrationLink[]>([]);
+group_stage\components\squad\RegistrationManager.tsx:87: .from("team_registration_links")
+group_stage\components\squad\RegistrationManager.tsx:92: .from("player_registration_submissions")
+group_stage\components\squad\RegistrationManager.tsx:105: "Failed to load registrations. Have you run supabase/phase3.sql?",
+group_stage\components\squad\RegistrationManager.tsx:108: setLinks((linksResult.data ?? []) as RegistrationLink[]);
+group_stage\components\squad\RegistrationManager.tsx:155: "create_registration_link",
+group_stage\components\squad\RegistrationManager.tsx:172: setLinks((current) => [data as RegistrationLink, ...current]);
+group_stage\components\squad\RegistrationManager.tsx:177: async function copyLink(link: RegistrationLink) {
+group_stage\components\squad\RegistrationManager.tsx:179: registrationUrl(link.token, window.location.origin)
+group_stage\components\squad\RegistrationManager.tsx:181: ok("Registration link copied.");
+group_stage\components\squad\RegistrationManager.tsx:184: function whatsappUrl(link: RegistrationLink) {
+group_stage\components\squad\RegistrationManager.tsx:185: const url = registrationUrl(link.token, window.location.origin);
+group_stage\components\squad\RegistrationManager.tsx:197: link: RegistrationLink,
+group_stage\components\squad\RegistrationManager.tsx:198: changes: Partial<RegistrationLink>,
+group_stage\components\squad\RegistrationManager.tsx:205: .from("team_registration_links")
+group_stage\components\squad\RegistrationManager.tsx:218: current.map((l) => (l.id === link.id ? (data as RegistrationLink) : l))
+group_stage\components\squad\RegistrationManager.tsx:223: function revoke(link: RegistrationLink) {
+group_stage\components\squad\RegistrationManager.tsx:239: function extend(link: RegistrationLink) {
+group_stage\components\squad\RegistrationManager.tsx:249: async function deleteLink(link: RegistrationLink) {
+group_stage\components\squad\RegistrationManager.tsx:262: .from("team_registration_links")
+group_stage\components\squad\RegistrationManager.tsx:371: Loading registrations...
+group_stage\components\squad\RegistrationManager.tsx:394: <h2 className="text-lg font-bold">Registration links</h2>
+group_stage\components\squad\TeamsPanel.tsx:78: .from("teams")
+group_stage\components\squad\TeamsPanel.tsx:115: .from("teams")
+group_stage\components\squad\TeamsPanel.tsx:155: .from("teams")
+group_stage\components\squad\TeamsPanel.tsx:184: .from("teams")
+group_stage\components\squad\TeamsPanel.tsx:210: .from("matches")
+group_stage\components\squad\TeamsPanel.tsx:241: .from("players")
+group_stage\components\squad\TeamsPanel.tsx:254: .from("teams")
+group_stage\lib\registration.ts:1: export type RegistrationLink = {
+group_stage\lib\registration.ts:32: link: RegistrationLink,
+group_stage\lib\registration.ts:41: link: RegistrationLink,
+group_stage\lib\registration.ts:53: export function registrationUrl(token: string, origin: string) {
+group_stage\lib\squad.ts:4: public_slug: string;
+group_stage\lib\squad.ts:5: admin_id: string;
+group_stage\lib\storage.ts:48: export const REGISTRATION_BUCKET = "registration-photos";
+group_stage\lib\storage.ts:60: if (bucket !== BUCKET && bucket !== REGISTRATION_BUCKET) return;
+group_stage\lib\storage.ts:100: /** Used by the public registration page. The token authorises the upload. */
+group_stage\lib\storage.ts:101: export async function uploadRegistrationPhoto(
+group_stage\lib\storage.ts:109: .from(REGISTRATION_BUCKET)
+group_stage\lib\storage.ts:119: .from(REGISTRATION_BUCKET)
+group_stage\lib\supabase.ts:1: import { createClient } from "@supabase/supabase-js";
+group_stage\lib\supabase.ts:20: export const supabase = createClient(
+group_stage\supabase\phase1.sql:6: add column if not exists archived_at timestamptz;
+group_stage\supabase\phase1.sql:36: insert into tournaments (admin_id, name, format, public_slug)
+group_stage\supabase\phase1.sql:141: where id = p_id and admin_id = auth.uid()
+group_stage\supabase\phase1.sql:148: delete from gallery_images where tournament_id = p_id;
+group_stage\supabase\phase3.sql:1: -- Phase 3: registration links + player submissions.
+group_stage\supabase\phase3.sql:6: --    only call get_registration_link() and submit_registration(), which
+group_stage\supabase\phase3.sql:12: create table if not exists team_registration_links (
+group_stage\supabase\phase3.sql:23: create table if not exists player_registration_submissions (
+group_stage\supabase\phase3.sql:25: link_id uuid references team_registration_links(id) on delete set null,
+group_stage\supabase\phase3.sql:39: on team_registration_links (tournament_id);
+group_stage\supabase\phase3.sql:41: on player_registration_submissions (tournament_id, status);
+group_stage\supabase\phase3.sql:43: on player_registration_submissions (link_id);
+group_stage\supabase\phase3.sql:47: alter table team_registration_links enable row level security;
+group_stage\supabase\phase3.sql:48: alter table player_registration_submissions enable row level security;
+group_stage\supabase\phase3.sql:50: drop policy if exists "owners manage registration links" on team_registration_links;
+group_stage\supabase\phase3.sql:51: create policy "owners manage registration links"
+group_stage\supabase\phase3.sql:52: on team_registration_links for all to authenticated
+group_stage\supabase\phase3.sql:56: where t.id = team_registration_links.tournament_id
+group_stage\supabase\phase3.sql:57: and t.admin_id = auth.uid()
+group_stage\supabase\phase3.sql:63: where t.id = team_registration_links.tournament_id
+group_stage\supabase\phase3.sql:64: and t.admin_id = auth.uid()
+group_stage\supabase\phase3.sql:68: drop policy if exists "owners manage submissions" on player_registration_submissions;
+group_stage\supabase\phase3.sql:69: create policy "owners manage submissions"
+group_stage\supabase\phase3.sql:70: on player_registration_submissions for all to authenticated
+group_stage\supabase\phase3.sql:74: where t.id = player_registration_submissions.tournament_id
+group_stage\supabase\phase3.sql:75: and t.admin_id = auth.uid()
+group_stage\supabase\phase3.sql:81: where t.id = player_registration_submissions.tournament_id
+group_stage\supabase\phase3.sql:82: and t.admin_id = auth.uid()
+group_stage\supabase\phase3.sql:94: select 1 from team_registration_links l
+group_stage\supabase\phase3.sql:108: from team_registration_links l
+group_stage\supabase\phase3.sql:110: where l.token = p_token and t.admin_id = auth.uid()
+group_stage\supabase\phase3.sql:116: create or replace function public.get_registration_link(p_token text)
+group_stage\supabase\phase3.sql:122: lk team_registration_links;
+group_stage\supabase\phase3.sql:129: select * into lk from team_registration_links where token = p_token;
+group_stage\supabase\phase3.sql:136: from player_registration_submissions
+group_stage\supabase\phase3.sql:147: select number from player_registration_submissions
+group_stage\supabase\phase3.sql:175: create or replace function public.submit_registration(
+group_stage\supabase\phase3.sql:184: lk team_registration_links;
+group_stage\supabase\phase3.sql:196: from team_registration_links
+group_stage\supabase\phase3.sql:201: raise exception 'This registration link is not valid.';
+group_stage\supabase\phase3.sql:204: raise exception 'This registration link has been closed by the organiser.';
+group_stage\supabase\phase3.sql:207: raise exception 'This registration link has expired.';
+group_stage\supabase\phase3.sql:222: from player_registration_submissions
+group_stage\supabase\phase3.sql:257: or exists (select 1 from player_registration_submissions
+group_stage\supabase\phase3.sql:265: or exists (select 1 from player_registration_submissions
+group_stage\supabase\phase3.sql:275: and v_photo not like '%/storage/v1/object/public/registration-photos/'
+group_stage\supabase\phase3.sql:283: insert into player_registration_submissions
+group_stage\supabase\phase3.sql:295: create or replace function public.create_registration_link(
+group_stage\supabase\phase3.sql:300: ) returns team_registration_links
+group_stage\supabase\phase3.sql:305: v_link team_registration_links;
+group_stage\supabase\phase3.sql:318: insert into team_registration_links
+group_stage\supabase\phase3.sql:345: s player_registration_submissions;
+group_stage\supabase\phase3.sql:350: from player_registration_submissions
+group_stage\supabase\phase3.sql:363: update player_registration_submissions
+group_stage\supabase\phase3.sql:381: update player_registration_submissions
+group_stage\supabase\phase3.sql:392: values ('registration-photos', 'registration-photos', true, 2097152, array['image/jpeg'])
+group_stage\supabase\phase3.sql:399: create policy "open links accept photo uploads"
+group_stage\supabase\phase3.sql:403: bucket_id = 'registration-photos'
+group_stage\supabase\phase3.sql:407: drop policy if exists "owners read registration photos" on storage.objects;
+group_stage\supabase\phase3.sql:408: create policy "owners read registration photos"
+group_stage\supabase\phase3.sql:412: bucket_id = 'registration-photos'
+group_stage\supabase\phase3.sql:416: drop policy if exists "owners remove registration photos" on storage.objects;
+group_stage\supabase\phase3.sql:417: create policy "owners remove registration photos"
+group_stage\supabase\phase3.sql:421: bucket_id = 'registration-photos'
+group_stage\supabase\phase3.sql:435: create policy "admins can upload league gallery"
+group_stage\supabase\phase3.sql:442: and t.admin_id = auth.uid()
+group_stage\supabase\phase3.sql:447: create policy "admins can update league gallery"
+group_stage\supabase\phase3.sql:454: and t.admin_id = auth.uid()
+group_stage\supabase\phase3.sql:462: and t.admin_id = auth.uid()
+group_stage\supabase\phase3.sql:467: create policy "admins can delete league gallery"
+group_stage\supabase\phase3.sql:474: and t.admin_id = auth.uid()
+group_stage\supabase\phase3.sql:482: grant execute on function public.get_registration_link(text) to anon, authenticated;
+group_stage\supabase\phase3.sql:483: grant execute on function public.submit_registration(text, text, jsonb) to anon, authenticated;
+group_stage\supabase\phase3.sql:484: grant execute on function public.create_registration_link(uuid, uuid, timestamptz, int) to authenticated;
+group_stage\supabase\policies.sql:15: alter table gallery_images enable row level security;
+group_stage\supabase\policies.sql:18: create policy "public can read tournaments"
+group_stage\supabase\policies.sql:22: create policy "admins can create tournaments"
+group_stage\supabase\policies.sql:24: with check (auth.uid() = admin_id);
+group_stage\supabase\policies.sql:26: create policy "admins can update own tournaments"
+group_stage\supabase\policies.sql:28: using (auth.uid() = admin_id)
+group_stage\supabase\policies.sql:29: with check (auth.uid() = admin_id);
+group_stage\supabase\policies.sql:31: create policy "admins can delete own tournaments"
+group_stage\supabase\policies.sql:33: using (auth.uid() = admin_id);
+group_stage\supabase\policies.sql:36: create policy "public can read teams"
+group_stage\supabase\policies.sql:39: create policy "admins can insert own teams"
+group_stage\supabase\policies.sql:44: where t.id = tournament_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:48: create policy "admins can update own teams"
+group_stage\supabase\policies.sql:53: where t.id = teams.tournament_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:59: where t.id = teams.tournament_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:63: create policy "admins can delete own teams"
+group_stage\supabase\policies.sql:68: where t.id = teams.tournament_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:73: create policy "public can read players"
+group_stage\supabase\policies.sql:76: create policy "admins can insert own players"
+group_stage\supabase\policies.sql:83: where tm.id = team_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:87: create policy "admins can update own players"
+group_stage\supabase\policies.sql:94: where tm.id = players.team_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:102: where tm.id = players.team_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:106: create policy "admins can delete own players"
+group_stage\supabase\policies.sql:113: where tm.id = players.team_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:118: create policy "public can read matches"
+group_stage\supabase\policies.sql:121: create policy "admins can insert own matches"
+group_stage\supabase\policies.sql:126: where t.id = tournament_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:130: create policy "admins can update own matches"
+group_stage\supabase\policies.sql:135: where t.id = matches.tournament_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:141: where t.id = matches.tournament_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:145: create policy "admins can delete own matches"
+group_stage\supabase\policies.sql:150: where t.id = matches.tournament_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:155: create policy "public can read goals"
+group_stage\supabase\policies.sql:158: create policy "admins can insert own goals"
+group_stage\supabase\policies.sql:165: where m.id = match_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:169: create policy "admins can update own goals"
+group_stage\supabase\policies.sql:176: where m.id = goals.match_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:184: where m.id = goals.match_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:188: create policy "admins can delete own goals"
+group_stage\supabase\policies.sql:195: where m.id = goals.match_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:200: create policy "public can read gallery"
+group_stage\supabase\policies.sql:201: on gallery_images for select using (true);
+group_stage\supabase\policies.sql:203: create policy "admins can insert own gallery"
+group_stage\supabase\policies.sql:204: on gallery_images for insert
+group_stage\supabase\policies.sql:208: where t.id = tournament_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:212: create policy "admins can update own gallery"
+group_stage\supabase\policies.sql:213: on gallery_images for update
+group_stage\supabase\policies.sql:217: where t.id = gallery_images.tournament_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:223: where t.id = gallery_images.tournament_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:227: create policy "admins can delete own gallery"
+group_stage\supabase\policies.sql:228: on gallery_images for delete
+group_stage\supabase\policies.sql:232: where t.id = gallery_images.tournament_id and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:238: create policy "public can view league gallery"
+group_stage\supabase\policies.sql:243: create policy "admins can upload league gallery"
+group_stage\supabase\policies.sql:252: and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:256: create policy "admins can update league gallery"
+group_stage\supabase\policies.sql:265: and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:274: and t.admin_id = auth.uid()
+group_stage\supabase\policies.sql:278: create policy "admins can delete league gallery"
+group_stage\supabase\policies.sql:287: and t.admin_id = auth.uid()
+lib\supabase.ts:1: import { createClient } from "@supabase/supabase-js";
+lib\supabase.ts:21: export const supabase = createClient(
