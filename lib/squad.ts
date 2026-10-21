@@ -1,0 +1,97 @@
+export type TournamentInfo = {
+  id: string;
+  name: string;
+  public_slug: string;
+  admin_id: string;
+};
+
+export type Team = {
+  id: string;
+  tournament_id: string;
+  name: string;
+  logo_url: string | null;
+  /** Kit colours (#rrggbb). Absent until phase4.sql has been applied. */
+  primary_color?: string | null;
+  secondary_color?: string | null;
+};
+
+export type Player = {
+  id: string;
+  team_id: string;
+  name: string;
+  number: number | null;
+  photo_url: string | null;
+  /** Absent until phase4.sql has been applied. */
+  preferred_position?: Position | null;
+};
+
+export type Position = "GK" | "DEF" | "MID" | "FWD";
+
+export const POSITIONS: { value: Position; label: string }[] = [
+  { value: "GK", label: "Goalkeeper" },
+  { value: "DEF", label: "Defender" },
+  { value: "MID", label: "Midfielder" },
+  { value: "FWD", label: "Forward" },
+];
+
+export type Notice = { type: "error" | "success"; text: string } | null;
+
+export const MIN_SHIRT = 0;
+export const MAX_SHIRT = 99;
+
+export function sortTeams(list: Team[]) {
+  return [...list].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function sortPlayers(list: Player[]) {
+  return [...list].sort((a, b) => {
+    if (a.number === null && b.number === null) {
+      return a.name.localeCompare(b.name);
+    }
+    if (a.number === null) return 1;
+    if (b.number === null) return -1;
+    return a.number - b.number;
+  });
+}
+
+/** Empty string means "no number". Throws a readable error otherwise. */
+export function parseShirt(value: string): number | null {
+  const trimmed = value.trim();
+
+  if (!trimmed) return null;
+
+  const number = Number(trimmed);
+
+  if (
+    !Number.isInteger(number) ||
+    number < MIN_SHIRT ||
+    number > MAX_SHIRT
+  ) {
+    throw new Error(
+      `Shirt number must be a whole number from ${MIN_SHIRT} to ${MAX_SHIRT}.`
+    );
+  }
+
+  return number;
+}
+
+export function describeDbError(
+  error: { code?: string; message: string } | null | undefined,
+  fallback: string
+) {
+  if (!error) return fallback;
+
+  if (error.code === "23505") {
+    return "That shirt number is already taken in this team.";
+  }
+
+  if (error.code === "42703" || error.code === "42P01") {
+    return "The database needs an update. Run the latest supabase/phase*.sql files, then try again.";
+  }
+
+  if (error.code === "23503") {
+    return "This record is still referenced elsewhere (for example by a match), so it cannot be removed.";
+  }
+
+  return error.message || fallback;
+}

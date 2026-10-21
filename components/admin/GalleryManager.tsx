@@ -43,28 +43,33 @@ export default function GalleryManager({
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    loadImages();
-  }, [tournamentId]);
+    let active = true;
 
-  async function loadImages() {
-    setLoading(true);
-    setError("");
+    async function loadImages() {
+      const { data, error } = await supabase
+        .from("gallery_images")
+        .select("*")
+        .eq("tournament_id", tournamentId)
+        .order("created_at", { ascending: false });
 
-    const { data, error } = await supabase
-      .from("gallery_images")
-      .select("*")
-      .eq("tournament_id", tournamentId)
-      .order("created_at", { ascending: false });
+      if (!active) return;
 
-    if (error) {
-      setError(error.message);
-      setImages([]);
-    } else {
-      setImages(data ?? []);
+      if (error) {
+        setError(error.message);
+        setImages([]);
+      } else {
+        setImages(data ?? []);
+      }
+
+      setLoading(false);
     }
 
-    setLoading(false);
-  }
+    void loadImages();
+
+    return () => {
+      active = false;
+    };
+  }, [tournamentId]);
 
   function handleFileChange(
     event: ChangeEvent<HTMLInputElement>

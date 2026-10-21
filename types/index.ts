@@ -35,6 +35,9 @@ export interface Team {
   goalsFor: number;
   goalsAgainst: number;
   goalDiff: number;
+  /** Kit colours (#rrggbb), set per team in the admin Teams tab. */
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
 }
 
 export interface Player {

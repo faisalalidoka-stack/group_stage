@@ -3,6 +3,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -12,6 +13,7 @@ import {
   Camera,
   ChevronDown,
   Clock3,
+  LayoutGrid,
   MapPin,
   Trophy,
   Users,
@@ -20,6 +22,12 @@ import {
 
 import { supabase } from "@/lib/supabase";
 import { calculateStandings } from "@/lib/algorithms";
+import {
+  buildSide,
+  type LineupPlayerRow,
+  type LineupRow,
+} from "@/lib/lineups";
+import LineupView from "@/components/lineup/LineupView";
 
 import type {
   GalleryImage,
@@ -53,6 +61,8 @@ type TeamRow = {
   goals_for: number;
   goals_against: number;
   goal_diff: number;
+  primary_color?: string | null;
+  secondary_color?: string | null;
 };
 
 type PlayerRow = {
@@ -108,6 +118,7 @@ type PublicMatch = Match & {
 type Tab =
   | "standings"
   | "fixtures"
+  | "lineups"
   | "leaders"
   | "gallery";
 
@@ -145,6 +156,8 @@ function mapTeam(row: TeamRow): Team {
     goalsFor: row.goals_for,
     goalsAgainst: row.goals_against,
     goalDiff: row.goal_diff,
+    primaryColor: row.primary_color ?? null,
+    secondaryColor: row.secondary_color ?? null,
   };
 }
 
@@ -325,6 +338,12 @@ export default function PublicTournamentPage({
   const [gallery, setGallery] =
     useState<GalleryImage[]>([]);
 
+  const [lineups, setLineups] = useState<LineupRow[]>([]);
+  const [lineupRows, setLineupRows] = useState<LineupPlayerRow[]>([]);
+  const [openLineupMatchId, setOpenLineupMatchId] = useState<string | null>(
+    null
+  );
+
   const [activeTab, setActiveTab] =
     useState<Tab>("standings");
 
@@ -351,6 +370,13 @@ export default function PublicTournamentPage({
     };
   }, [params]);
 
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const matchIdsRef = useRef<Set<string>>(new Set());
+  const reloadTimer = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+
   useEffect(() => {
     if (!slug) {
       return;
@@ -359,7 +385,12 @@ export default function PublicTournamentPage({
     let mounted = true;
 
     async function loadTournament() {
-      setLoading(true);
+      // Only show the skeleton on the first load. Live refreshes
+      // update the page quietly in place.
+      if (reloadKey === 0) {
+        setLoading(true);
+      }
+
       setError(null);
 
       const {
@@ -393,49 +424,46 @@ export default function PublicTournamentPage({
         tournamentRow as TournamentRow
       );
 
-      const [
-        teamsResult,
-        playersResult,
-        matchesResult,
-        galleryResult,
-      ] = await Promise.all([
-        supabase
-          .from("teams")
-          .select(
-            "id, tournament_id, name, logo_url, points, played, won, drawn, lost, goals_for, goals_against, goal_diff"
-          )
-          .eq("tournament_id", tournament.id)
-          .order("name"),
+      const teamsResult = await supabase
+        .from("teams")
+        .select("*")
+        .eq("tournament_id", tournament.id)
+        .order("name");
 
-        supabase
-          .from("players")
-          .select(
-            "id, team_id, name, number"
-          )
-          .order("name"),
+      const teamIds = (
+        (teamsResult.data ?? []) as TeamRow[]
+      ).map((team) => team.id);
 
-        supabase
-          .from("matches")
-          .select(
-            "id, tournament_id, home_team_id, away_team_id, home_score, away_score, status, stage, round_number, scheduled_at, location, referee_name, mvp_player_id"
-          )
-          .eq("tournament_id", tournament.id)
-          .order("round_number")
-          .order("scheduled_at", {
-            ascending: true,
-            nullsFirst: true,
-          }),
+      const [playersResult, matchesResult, galleryResult] =
+        await Promise.all([
+          supabase
+            .from("players")
+            .select("id, team_id, name, number")
+            .in("team_id", teamIds)
+            .order("name"),
 
-        supabase
-          .from("gallery_images")
-          .select(
-            "id, tournament_id, image_url, caption, created_at"
-          )
-          .eq("tournament_id", tournament.id)
-          .order("created_at", {
-            ascending: false,
-          }),
-      ]);
+          supabase
+            .from("matches")
+            .select(
+              "id, tournament_id, home_team_id, away_team_id, home_score, away_score, status, stage, round_number, scheduled_at, location, referee_name, mvp_player_id"
+            )
+            .eq("tournament_id", tournament.id)
+            .order("round_number")
+            .order("scheduled_at", {
+              ascending: true,
+              nullsFirst: true,
+            }),
+
+          supabase
+            .from("gallery_images")
+            .select(
+              "id, tournament_id, image_url, caption, created_at"
+            )
+            .eq("tournament_id", tournament.id)
+            .order("created_at", {
+              ascending: false,
+            }),
+        ]);
 
       if (
         teamsResult.error ||
@@ -469,19 +497,14 @@ export default function PublicTournamentPage({
       const mappedMatches = (
         (matchesResult.data ?? []) as MatchRow[]
       )
-        .map((row) =>
-          mapMatch(row, mappedTeams)
-        )
+        .map((row) => mapMatch(row, mappedTeams))
         .filter(
-          (
-            match
-          ): match is PublicMatch =>
-            match !== null
+          (match): match is PublicMatch => match !== null
         );
 
-      const matchIds = mappedMatches.map(
-        (match) => match.id
-      );
+      const matchIds = mappedMatches.map((match) => match.id);
+
+      matchIdsRef.current = new Set(matchIds);
 
       let mappedGoals: Goal[] = [];
 
@@ -489,9 +512,7 @@ export default function PublicTournamentPage({
         const { data: goalsData, error: goalsError } =
           await supabase
             .from("goals")
-            .select(
-              "id, match_id, player_id, minute"
-            )
+            .select("id, match_id, player_id, minute")
             .in("match_id", matchIds);
 
         if (goalsError) {
@@ -503,47 +524,132 @@ export default function PublicTournamentPage({
           return;
         }
 
-        mappedGoals = (
-          (goalsData ?? []) as GoalRow[]
-        ).map((row) => ({
-          id: row.id,
-          matchId: row.match_id,
-          playerId: row.player_id,
-          minute: row.minute,
-        }));
+        mappedGoals = ((goalsData ?? []) as GoalRow[]).map(
+          (row) => ({
+            id: row.id,
+            matchId: row.match_id,
+            playerId: row.player_id,
+            minute: row.minute,
+          })
+        );
+      }
+
+      // Published lineups. Any failure (for example phase4.sql not applied
+      // yet) just means "no lineups"; it must never break the public page.
+      let mappedLineups: LineupRow[] = [];
+      let mappedLineupRows: LineupPlayerRow[] = [];
+
+      const lineupsResult = await supabase
+        .from("lineups")
+        .select("*")
+        .eq("tournament_id", tournament.id)
+        .eq("status", "PUBLISHED");
+
+      if (!lineupsResult.error && lineupsResult.data) {
+        mappedLineups = lineupsResult.data as LineupRow[];
+
+        if (mappedLineups.length > 0) {
+          const rowsResult = await supabase
+            .from("lineup_players")
+            .select("*")
+            .in(
+              "lineup_id",
+              mappedLineups.map((lineup) => lineup.id)
+            );
+
+          if (!rowsResult.error && rowsResult.data) {
+            mappedLineupRows = rowsResult.data as LineupPlayerRow[];
+          }
+        }
       }
 
       if (!mounted) {
         return;
       }
 
+      setLineups(mappedLineups);
+      setLineupRows(mappedLineupRows);
       setTournament(tournament);
       setTeams(mappedTeams);
       setPlayers(mappedPlayers);
       setMatches(mappedMatches);
       setGoals(mappedGoals);
       setGallery(
-        (
-          (galleryResult.data ?? []) as GalleryRow[]
-        ).map(mapGallery)
+        ((galleryResult.data ?? []) as GalleryRow[]).map(
+          mapGallery
+        )
       );
       setLoading(false);
     }
 
     void loadTournament();
 
+    return () => {
+      mounted = false;
+    };
+  }, [slug, reloadKey]);
+
+  const tournamentId = tournament?.id;
+
+  useEffect(() => {
+    if (!tournamentId) {
+      return;
+    }
+
+    const scheduleReload = () => {
+      if (reloadTimer.current) {
+        clearTimeout(reloadTimer.current);
+      }
+
+      // A single admin save fires several row events;
+      // wait briefly and refresh once.
+      reloadTimer.current = setTimeout(
+        () => setReloadKey((key) => key + 1),
+        400
+      );
+    };
+
     const channel = supabase
-      .channel(`public-tournament-${slug}`)
+      .channel(`public-tournament-${tournamentId}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "matches",
+          filter: `tournament_id=eq.${tournamentId}`,
         },
-        () => {
-          void loadTournament();
-        }
+        scheduleReload
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "teams",
+          filter: `tournament_id=eq.${tournamentId}`,
+        },
+        scheduleReload
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "lineups",
+          filter: `tournament_id=eq.${tournamentId}`,
+        },
+        scheduleReload
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "gallery_images",
+          filter: `tournament_id=eq.${tournamentId}`,
+        },
+        scheduleReload
       )
       .on(
         "postgres_changes",
@@ -552,17 +658,33 @@ export default function PublicTournamentPage({
           schema: "public",
           table: "goals",
         },
-        () => {
-          void loadTournament();
+        (payload) => {
+          const row = {
+            ...(payload.old ?? {}),
+            ...(payload.new ?? {}),
+          } as { match_id?: string };
+
+          // Ignore goals that belong to other tournaments.
+          if (
+            row.match_id &&
+            !matchIdsRef.current.has(row.match_id)
+          ) {
+            return;
+          }
+
+          scheduleReload();
         }
       )
       .subscribe();
 
     return () => {
-      mounted = false;
+      if (reloadTimer.current) {
+        clearTimeout(reloadTimer.current);
+      }
+
       void supabase.removeChannel(channel);
     };
-  }, [slug]);
+  }, [tournamentId]);
 
   const standings = useMemo(() => {
     return calculateStandings(
@@ -832,6 +954,17 @@ export default function PublicTournamentPage({
 
           <TabButton
             active={
+              activeTab === "lineups"
+            }
+            onClick={() =>
+              setActiveTab("lineups")
+            }
+          >
+            Lineups
+          </TabButton>
+
+          <TabButton
+            active={
               activeTab === "leaders"
             }
             onClick={() =>
@@ -1010,6 +1143,121 @@ export default function PublicTournamentPage({
                 )}
               </div>
             )}
+          </section>
+        )}
+
+        {activeTab === "lineups" && (
+          <section>
+            <SectionTitle
+              icon={
+                <LayoutGrid className="h-5 w-5" />
+              }
+              title="Lineups"
+            />
+
+            {(() => {
+              const withLineups = matches.filter(
+                (match) =>
+                  lineups.some(
+                    (lineup) => lineup.match_id === match.id
+                  )
+              );
+
+              if (withLineups.length === 0) {
+                return (
+                  <EmptyState text="No lineups have been published yet." />
+                );
+              }
+
+              const asSide = (
+                team: Team,
+                matchId: string,
+                which: "home" | "away"
+              ) => {
+                const lineup = lineups.find(
+                  (l) =>
+                    l.match_id === matchId &&
+                    l.team_id === team.id
+                );
+
+                return lineup
+                  ? buildSide(
+                      {
+                        id: team.id,
+                        name: team.name,
+                        primary_color: team.primaryColor,
+                        secondary_color: team.secondaryColor,
+                      },
+                      lineup,
+                      lineupRows,
+                      players,
+                      which
+                    )
+                  : null;
+              };
+
+              return (
+                <div className="space-y-3">
+                  {withLineups.map((match) => {
+                    const open =
+                      (openLineupMatchId ??
+                        withLineups[0].id) === match.id;
+
+                    return (
+                      <div
+                        key={match.id}
+                        className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                      >
+                        <button
+                          onClick={() =>
+                            setOpenLineupMatchId(
+                              open ? "" : match.id
+                            )
+                          }
+                          className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
+                        >
+                          <span>
+                            <span className="block text-xs font-semibold text-slate-500">
+                              Round {match.roundNumber}
+                            </span>
+                            <span className="block font-bold text-slate-900">
+                              {match.homeTeam.name} vs{" "}
+                              {match.awayTeam.name}
+                            </span>
+                          </span>
+
+                          <ChevronDown
+                            className={`h-5 w-5 shrink-0 text-slate-400 transition ${
+                              open ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+
+                        {open && (
+                          <div className="border-t border-slate-100 p-4">
+                            <LineupView
+                              homeName={match.homeTeam.name}
+                              awayName={match.awayTeam.name}
+                              home={asSide(
+                                match.homeTeam,
+                                match.id,
+                                "home"
+                              )}
+                              away={asSide(
+                                match.awayTeam,
+                                match.id,
+                                "away"
+                              )}
+                              theme="light"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </section>
         )}
 
