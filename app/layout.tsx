@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { getServerSiteUrl } from "@/lib/site";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,7 +14,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // Lets relative image URLs in link previews resolve to absolute ones.
+  metadataBase: new URL(getServerSiteUrl()),
   title: "Group Stage",
+  openGraph: { siteName: "Group Stage", type: "website" },
   description: "Create. Compete. Share. Run your football tournament online.",
 };
 

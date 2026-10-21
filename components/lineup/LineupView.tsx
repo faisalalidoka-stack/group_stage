@@ -1,4 +1,4 @@
-import { buildSlots, type Slot } from "@/lib/formations";
+import { buildSlots, placeSlot, type PlaceMode } from "@/lib/formations";
 import {
   GOALKEEPER_KIT,
   separateKits,
@@ -23,16 +23,7 @@ const AWAY_GOALKEEPER_KIT: Kit = {
   text: "#083344",
 };
 
-type Mode = "full" | "home" | "away";
-
-function place(slot: Slot, mode: Mode) {
-  if (mode === "full") return { x: slot.x, y: slot.y };
-  if (mode === "home") return { x: slot.x, y: 52 + slot.y * 0.46 };
-
-  return { x: 100 - slot.x, y: 48 - slot.y * 0.46 };
-}
-
-function markersFor(side: LineupSide, kit: Kit, mode: Mode): PitchMarker[] {
+function markersFor(side: LineupSide, kit: Kit, mode: PlaceMode): PitchMarker[] {
   const slots = new Map(buildSlots(side.formation).map((s) => [s.index, s]));
 
   return side.starters.flatMap((starter) => {
@@ -40,7 +31,7 @@ function markersFor(side: LineupSide, kit: Kit, mode: Mode): PitchMarker[] {
 
     if (!slot) return [];
 
-    const { x, y } = place(slot, mode);
+    const { x, y } = placeSlot(slot, mode);
     const isKeeper = starter.role === "GK";
 
     return [

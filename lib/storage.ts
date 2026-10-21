@@ -22,7 +22,7 @@ export function validateImage(file: File): string | null {
 
 export async function uploadImage(
   tournamentId: string,
-  folder: "players" | "teams",
+  folder: "players" | "teams" | "branding",
   file: File
 ): Promise<string> {
   const problem = validateImage(file);
@@ -85,6 +85,9 @@ export async function compressImage(
 
   if (!context) throw new Error("Could not process that image.");
 
+  // JPEG has no transparency: put a white background behind transparent PNGs.
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
 

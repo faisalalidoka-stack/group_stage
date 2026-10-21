@@ -19,7 +19,7 @@ What the statuses mean:
 | FAIL    | a security or data problem. Fix before going further      |
 
 If rows say MISSING, run the named file(s) in order: `phase1.sql`, `phase2.sql`, `phase3.sql`,
-`phase4.sql`, then run `verify.sql` again. Do not run `policies.sql` on a
+`phase4.sql`, `phase5.sql`, then run `verify.sql` again. Do not run `policies.sql` on a
 database that already has policies; it is only for a fresh setup.
 If a phase fails with an error, send me the exact error text and do not retry.
 

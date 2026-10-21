@@ -19,7 +19,7 @@ language plpgsql
 as $fn$
 declare
   expected jsonb := '{
-    "tournaments": ["id","admin_id","name","format","public_slug","created_at","archived_at","match_size"],
+    "tournaments": ["id","admin_id","name","format","public_slug","created_at","archived_at","match_size","logo_url","cover_url","venue","starts_on","ends_on"],
     "teams": ["id","tournament_id","name","logo_url","primary_color","secondary_color"],
     "players": ["id","team_id","name","number","photo_url","preferred_position"],
     "matches": ["id","tournament_id","home_team_id","away_team_id","home_score","away_score","status","stage","round_number","scheduled_at","location","referee_name","mvp_player_id"],
@@ -76,6 +76,8 @@ begin
           when 'photo_url' = any(missing) and t = 'players' then ' (run phase2.sql)'
           when missing && array['match_size','primary_color','secondary_color','preferred_position']
             then ' (run phase4.sql)'
+          when missing && array['logo_url','cover_url','venue','starts_on','ends_on']
+            then ' (run phase5.sql)'
           else ' (check against your schema)'
         end;
     end if;

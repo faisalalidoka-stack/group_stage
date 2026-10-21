@@ -20,6 +20,12 @@ export interface Tournament {
   format: TournamentFormat;
   publicSlug: string;
   createdAt: string;
+  /** Branding, set in the admin Settings tab (all optional). */
+  logoUrl?: string | null;
+  coverUrl?: string | null;
+  venue?: string | null;
+  startsOn?: string | null;
+  endsOn?: string | null;
 }
 
 export interface Team {

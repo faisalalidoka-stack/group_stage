@@ -172,3 +172,17 @@ export function autoFill(
 
   return result;
 }
+
+export type PlaceMode = "full" | "home" | "away";
+
+/**
+ * Maps a formation slot onto a pitch seen from above (0-100 both ways).
+ * "full": one team across the whole pitch. "home": bottom half, goalkeeper at
+ * the bottom. "away": top half, mirrored, goalkeeper at the top.
+ */
+export function placeSlot(slot: Slot, mode: PlaceMode) {
+  if (mode === "full") return { x: slot.x, y: slot.y };
+  if (mode === "home") return { x: slot.x, y: 52 + slot.y * 0.46 };
+
+  return { x: 100 - slot.x, y: 48 - slot.y * 0.46 };
+}

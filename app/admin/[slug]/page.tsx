@@ -22,6 +22,8 @@ import GalleryManager from "@/components/admin/GalleryManager";
 import SquadManager from "@/components/squad/SquadManager";
 import RegistrationManager from "@/components/squad/RegistrationManager";
 import LineupStudio from "@/components/lineup/LineupStudio";
+import ShareCentre from "@/components/share/ShareCentre";
+import TournamentSettings from "@/components/admin/TournamentSettings";
 import { toMatchSize } from "@/lib/formations";
 import { getSiteUrl } from "@/lib/site";
 import type { Player, Team } from "@/lib/squad";
@@ -57,6 +59,12 @@ type Tournament = {
   format: string;
   /** Players per side (5, 7 or 11). Absent until phase4.sql has been applied. */
   match_size?: number;
+  /** Branding. Absent until phase5.sql has been applied. */
+  logo_url?: string | null;
+  cover_url?: string | null;
+  venue?: string | null;
+  starts_on?: string | null;
+  ends_on?: string | null;
 };
 type MatchEditor = {
   match: Match;
@@ -101,7 +109,7 @@ export default function AdminPage() {
   const [editingGoals, setEditingGoals] = useState<GoalEditor[]>([]);
 
   const [activeTab, setActiveTab] = useState<
-  "fixtures" | "teams" | "lineups" | "registration" | "gallery"
+  "fixtures" | "teams" | "lineups" | "registration" | "share" | "settings" | "gallery"
 >("fixtures");
   const [pendingSubmissions, setPendingSubmissions] = useState(0);
   const teamMap = useMemo(() => {
@@ -705,6 +713,28 @@ export default function AdminPage() {
             )}
           </button>
           <button
+            onClick={() => setActiveTab("share")}
+            className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold ${
+              activeTab === "share"
+                ? "border-emerald-400 text-emerald-400"
+                : "border-transparent text-gray-500"
+            }`}
+          >
+            Share
+          </button>
+
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold ${
+              activeTab === "settings"
+                ? "border-emerald-400 text-emerald-400"
+                : "border-transparent text-gray-500"
+            }`}
+          >
+            Settings
+          </button>
+
+          <button
   onClick={() => setActiveTab("gallery")}
   className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold ${
     activeTab === "gallery"
@@ -891,6 +921,27 @@ export default function AdminPage() {
             onMatchSizeChange={(size) =>
               setTournament((current) =>
                 current ? { ...current, match_size: size } : current
+              )
+            }
+          />
+        )}
+
+        {activeTab === "share" && (
+          <ShareCentre
+            tournamentName={tournament.name}
+            slug={tournament.public_slug}
+            teams={teams}
+            matches={matches}
+          />
+        )}
+
+        {activeTab === "settings" && (
+          <TournamentSettings
+            tournamentId={tournament.id}
+            tournament={tournament}
+            onChange={(patch) =>
+              setTournament((current) =>
+                current ? { ...current, ...patch } : current
               )
             }
           />

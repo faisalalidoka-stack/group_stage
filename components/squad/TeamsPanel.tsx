@@ -25,6 +25,7 @@ import {
   type Team,
 } from "@/lib/squad";
 import {
+  compressImage,
   removeImageByUrl,
   uploadImage,
   validateImage,
@@ -191,7 +192,12 @@ export default function TeamsPanel({
     setBusyId(team.id);
 
     try {
-      const url = await uploadImage(tournamentId, "teams", file);
+      // Stored as a small JPEG so share cards can always embed the crest.
+      const url = await uploadImage(
+        tournamentId,
+        "teams",
+        await compressImage(file, 600)
+      );
 
       const { data, error } = await supabase
         .from("teams")
